@@ -682,6 +682,29 @@ describe('GatewayChannelsTable Slack edit mode', () => {
     });
   });
 
+  it('sanitizes pasted Slack edit tokens the same way as Save', async () => {
+    const { client, testCreate } = makeClient();
+    const onUpdate = vi.fn();
+    renderEditTable(client, makeSlackChannel(), { onUpdate });
+    expandPanel('Credentials');
+
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+      target: { value: ' xoxb-\u200bfresh ' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('xapp-...'), {
+      target: { value: ' xapp-\u2060fresh ' },
+    });
+    clickButton(/Test connection/);
+
+    await waitFor(() => expect(testCreate).toHaveBeenCalledTimes(1));
+    const tokens = { bot_token: 'xoxb-fresh', app_token: 'xapp-fresh' };
+    expect(testCreate.mock.calls[0][0]).toEqual({ gatewayChannelId: 'channel-1', config: tokens });
+
+    clickButton(/^Save$/);
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect(onUpdate.mock.calls[0][1].config).toMatchObject(tokens);
+  });
+
   it('derives the Message Sources scope/event list (no stale message.* events)', async () => {
     renderEditTable(null, makeSlackChannel());
     expandPanel('Message Sources');

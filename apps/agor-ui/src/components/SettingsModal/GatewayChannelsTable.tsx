@@ -3978,10 +3978,10 @@ export const GatewayChannelsTable: React.FC<GatewayChannelsTableProps> = ({
     const values = editForm.getFieldsValue(true);
     const config: Record<string, unknown> = {};
     if (values.bot_token && values.bot_token !== GATEWAY_REDACTED_SENTINEL) {
-      config.bot_token = values.bot_token;
+      config.bot_token = sanitizeSecretValue(values.bot_token);
     }
     if (values.app_token && values.app_token !== GATEWAY_REDACTED_SENTINEL) {
-      config.app_token = values.app_token;
+      config.app_token = sanitizeSecretValue(values.app_token);
     }
     await runConnectionProbe('slack', config, editingChannel.id);
   }, [editingChannel, editForm, runConnectionProbe]);
