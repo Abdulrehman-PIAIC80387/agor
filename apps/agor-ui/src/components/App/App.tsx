@@ -64,6 +64,7 @@ import {
   selectFirstBoardId,
   selectSessionById,
 } from '../../store/selectors';
+import { SharedUserSettingsModal } from '../../surfaces/SharedUserSettingsModal';
 import type { AgenticToolOption, CreateRepoOptions } from '../../types';
 import { initializeAudioOnInteraction } from '../../utils/audio';
 import { useThemedMessage } from '../../utils/message';
@@ -95,7 +96,7 @@ import { SessionCanvas, type SessionCanvasRef } from '../SessionCanvas';
 import { SessionPanel } from '../SessionPanel';
 import { PendingToolChoicePanel } from '../SessionPanel/PendingToolChoicePanel';
 import { SessionSettingsModal } from '../SessionSettingsModal';
-import { SettingsModal, UserSettingsModal } from '../SettingsModal';
+import { SettingsModal } from '../SettingsModal';
 import { TerminalModal, WEB_TERMINAL_MIN_ROLE } from '../TerminalModal';
 import { ThemeEditorModal } from '../ThemeEditorModal';
 import {
@@ -236,6 +237,14 @@ export interface AppProps {
     updates: UpdateUserInput,
     shouldApply?: () => boolean
   ) => void | Promise<void>;
+  /**
+   * Re-syncs the authenticated user's own directory row after a self-edit.
+   * `onUpdateUser` only persists the patch; the caller's `useAuth()` snapshot
+   * (`user`/`currentUser` here) is a separate one-time-fetched copy that
+   * `onUpdateUser` never touches, so without this the Settings modal reverts
+   * to stale values on next open (e.g. a cleared API key still shows "Set").
+   */
+  onRefreshCurrentUser?: (shouldApply: () => boolean) => Promise<unknown>;
   onDeleteUser?: (userId: string, shouldApply?: () => boolean) => void | Promise<void>;
   onCreateMCPServer?: (
     data: CreateMCPServerInput,
@@ -357,6 +366,7 @@ export const App: React.FC<AppProps> = ({
   onExecuteScheduleNow,
   onCreateUser,
   onUpdateUser,
+  onRefreshCurrentUser,
   onDeleteUser,
   onCreateMCPServer,
   onDeleteMCPServer,
@@ -1896,7 +1906,7 @@ export const App: React.FC<AppProps> = ({
           />
         )}
         <ThemeEditorModal open={themeEditorOpen} onClose={() => setThemeEditorOpen(false)} />
-        <UserSettingsModal
+        <SharedUserSettingsModal
           open={effectiveUserSettingsOpen}
           initialTab={userSettingsInitialTool ?? initialUserSettingsTab}
           onClose={() => {
@@ -1905,9 +1915,9 @@ export const App: React.FC<AppProps> = ({
             onUserSettingsClose?.();
           }}
           user={user || null}
-          currentUser={user || null}
           client={client}
-          onUpdate={onUpdateUser}
+          onUpdateUser={onUpdateUser}
+          onRefreshCurrentUser={onRefreshCurrentUser}
           onReopenOnboarding={async (mode, shouldApply) => {
             if (shouldApply && !shouldApply()) return;
             await onReopenOnboarding?.(mode, shouldApply);
